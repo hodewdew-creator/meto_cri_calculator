@@ -1,1 +1,192 @@
 
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Metoclopramide CRI 계산기</title>
+  <meta name="description" content="Metoclopramide 연속주입 계산 · 조제 레시피 산출 (원액 10 mg/2 mL/앰플 = 5 mg/mL)" />
+  <style>
+    :root{ --blue:#1d4ed8; --lightblue:#dbeafe; --border:#e5e7eb; --bg:#f8fafc; --card:#fff; }
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:#0f172a;padding:12px}
+    h2{margin:0 0 12px;font-size:1.35rem;color:var(--blue);text-align:center}
+    h3{margin:0 0 8px;font-size:1.05rem;color:#111}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
+    .ibox{border:2px solid var(--blue);border-radius:10px;padding:10px;background:#f9fafb;flex:1;display:flex;flex-direction:column;position:relative;min-width:120px;max-width:240px}
+    label{display:block;font-size:.85rem;color:var(--blue);margin-bottom:4px}
+    input[type=number], input[type=range]{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.95rem;box-sizing:border-box}
+    input[type=range]{padding:0}
+    .dose-display{margin-top:6px;font-weight:700;color:#1e40af;font-size:1rem;text-align:center}
+    input[type=range]::-webkit-slider-runnable-track {height:6px;background:#d1d5db;border-radius:3px}
+    input[type=range]::-webkit-slider-thumb {width:14px;height:14px;border-radius:50%;background:#2563eb;cursor:pointer;margin-top:-4px}
+    input[type=range]::-moz-range-track {height:6px;background:#d1d5db;border-radius:3px}
+    input[type=range]::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:#2563eb;cursor:pointer}
+    .ticks {display:flex;justify-content:space-between;font-size:0.75rem;color:#374151;margin-top:4px}
+    table{width:100%;border-collapse:collapse;font-size:.9rem}
+    th,td{padding:6px;border-bottom:1px solid var(--border);text-align:left}
+    td.bold{font-weight:700}
+    .right{text-align:right}
+    .total{background:#eff6ff;font-weight:700}
+    .seg{display:flex;gap:12px;flex-wrap:wrap}
+    .seg label{color:#111;margin:0;font-size:0.95rem}
+    .seg .chip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--border);padding:10px 14px;border-radius:999px;background:#fff;cursor:pointer;transition:all .2s;font-size:0.95rem}
+    .seg input{display:none}
+    .seg input:checked + span{background:var(--lightblue);color:#000;border-color:var(--blue);font-weight:700}
+    .hidden{display:none}
+    .bignum{font-size:1.2rem;padding:10px 30px;text-align:center;border-width:2px}
+    .unit-label{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:0.9rem;color:#374151}
+
+    /* 모바일 최적화 */
+    @media (max-width: 600px){
+      .row{flex-direction:column}
+      .ibox{max-width:100%}
+    }
+  </style>
+</head>
+<body>
+  <h2>Metoclopramide CRI 계산기</h2>
+
+  <div class="card">
+    <h3>⚙️ 기본 입력 <span style='font-size:0.85em'>(10 mg/2 mL/앰플 = 5 mg/mL)</span></h3>
+    <div class="row">
+      <div class="ibox"><label for="bw">체중 (kg)</label><input id="bw" type="number" step="0.1"></div>
+      <div class="ibox"><label for="flow">수액속도 (mL/hr)</label><input id="flow" type="number" step="0.1"></div>
+      <div class="ibox"><label for="dose">용량 (mg/kg/hr)</label>
+        <input id="dose" type="range" min="0.01" max="0.09" step="0.01" value="0.05">
+        <div id="doseVal" class="dose-display">0.05 mg/kg/hr</div>
+        <div class="ticks">
+          <span>0.01</span><span>0.03</span><span>0.05</span><span>0.07</span><span>0.09</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🧪 조제 기준 선택</h3>
+    <div class="ibox" style="max-width:100%">
+      <div class="seg" id="modeSeg">
+        <label class="chip"><input type="radio" name="mode" value="time" checked><span> 총시간</span></label>
+        <label class="chip"><input type="radio" name="mode" value="volume"><span>총량</span></label>
+        <label class="chip"><input type="radio" name="mode" value="default"><span>100mL 수액+Metoclopramide add</span></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="ibox mode-input mode-time" style="max-width:200px">
+          <input id="hours" class="bignum" type="number" step="1" min="1" placeholder="12">
+          <span class="unit-label">hr</span>
+        </div>
+        <div class="ibox mode-input mode-volume hidden" style="max-width:200px">
+          <input id="volume" class="bignum" type="number" step="1" min="1" placeholder="60">
+          <span class="unit-label">mL</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📊 조제 레시피</h3>
+    <table>
+      <tbody>
+        <tr><td>시간당 약물량</td><td class="right" id="needPerHr">-</td></tr>
+        <tr><td>총 조제량</td><td class="right" id="totalV">-</td></tr>
+        <tr><td class="bold">약물량 / 수액량</td><td class="right bold" id="mixPair">-</td></tr>
+      </tbody>
+      <tfoot>
+        <tr class="total"><td>앰플</td><td class="right" id="ampCount">-</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <script>
+    const STOCK_MG_ML = 5.0; // Metoclopramide 농도
+    const AMPULE_ML = 2.0;   // 1앰플 2 mL
+
+    const $ = (q)=>document.querySelector(q);
+    const bw = $('#bw');
+    const flow = $('#flow');
+    const dose = $('#dose');
+    const doseVal = $('#doseVal');
+    const hours = $('#hours');
+    const volume = $('#volume');
+    const needPerHr = $('#needPerHr');
+    const totalV = $('#totalV');
+    const mixPair = $('#mixPair');
+    const ampCount = $('#ampCount');
+
+    const fmt = (x)=> (isFinite(x)? Number(x).toFixed(2) : '-');
+
+    let mode = 'time';
+    document.querySelectorAll('input[name="mode"]').forEach(r=>{
+      r.addEventListener('change', ()=>{ mode = r.value; updateModeUI(); recalc(); });
+    });
+
+    function updateModeUI(){
+      document.querySelectorAll('.mode-input').forEach(div=>div.classList.add('hidden'));
+      if(mode==='time'){
+        document.querySelector('.mode-time').classList.remove('hidden');
+      }else if(mode==='volume'){
+        document.querySelector('.mode-volume').classList.remove('hidden');
+      }
+    }
+
+    dose.addEventListener('input', ()=>{
+      doseVal.textContent = `${dose.value} mg/kg/hr`;
+      recalc();
+    });
+
+    function recalc(){
+      const W = parseFloat(bw.value);
+      const F = parseFloat(flow.value);
+      const D = parseFloat(dose.value);
+
+      if(!(W>0) || !(D>0) || !(F>0)){
+        needPerHr.textContent = '-';
+        totalV.textContent = '-';
+        mixPair.textContent = '-';
+        ampCount.textContent = '-';
+        return;
+      }
+
+      // mg/kg/hr → mg/hr
+      const mg_per_hr = D * W;
+      needPerHr.textContent = `${fmt(mg_per_hr)} mg/hr`;
+
+      let V;
+      let stock_mL;
+      if(mode==='time'){
+        const H = parseFloat(hours.value) || parseFloat(hours.placeholder);
+        V = (H>0) ? F * H : NaN;
+        const total_mg = mg_per_hr * H;
+        stock_mL = total_mg / STOCK_MG_ML;
+        totalV.textContent = `${fmt(total_mg)} mg (${fmt(V)} mL @${F} mL/hr)`;
+      } else if(mode==='volume'){
+        const Vin = parseFloat(volume.value) || parseFloat(volume.placeholder);
+        V = (Vin>0) ? Vin : NaN;
+        const total_mg = (mg_per_hr / F) * V;
+        stock_mL = total_mg / STOCK_MG_ML;
+        totalV.textContent = `${fmt(total_mg)} mg (${fmt(V)} mL)`;
+      } else {
+        const diluent_mL = 100;
+        const C_mg_mL = mg_per_hr / F;
+        stock_mL = (C_mg_mL * diluent_mL) / STOCK_MG_ML;
+        V = stock_mL + diluent_mL;
+        totalV.textContent = `${fmt(V)} mL (100 mL 수액 기준)`;
+      }
+
+      if(!isFinite(stock_mL)){
+        mixPair.textContent = '⚠️ 입력값을 확인하세요';
+        ampCount.textContent = '-';
+        return;
+      }
+
+      const dil_mL = V - stock_mL;
+      mixPair.textContent = `약물 ${fmt(stock_mL)} mL + 수액 ${fmt(dil_mL)} mL`;
+      const ampExact = stock_mL / AMPULE_ML;
+      ampCount.textContent = `${fmt(ampExact)} 개 (=${fmt(stock_mL)} mL)`;
+    }
+
+    [bw,flow,hours,volume].forEach(el=>['input','change','keyup'].forEach(ev=>el.addEventListener(ev,recalc)));
+    recalc();
+  </script>
+</body>
+</html>
